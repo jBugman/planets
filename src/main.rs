@@ -3,13 +3,20 @@ use itertools::Itertools;
 use macroquad::prelude::*;
 use std::collections::VecDeque;
 
-const VIRTUAL_WIDTH: f32 = 1920.0;
-const VIRTUAL_HEIGHT: f32 = 1080.0;
+const VIRTUAL_WIDTH: f32 = 1920.;
+const VIRTUAL_HEIGHT: f32 = 1080.;
 
-const TRAIL_LENGTH: usize = 15000;
+const TRAIL_LENGTH: usize = 1000;
 
 const SCALE_FACTOR: f32 = 10e6;
 const G: f32 = 6.674e-11 * SCALE_FACTOR;
+
+const MAX_SPEED: f32 = 2.;
+
+const MAX_ORBIT_RADIUS: f32 = 400.;
+const ORBIT_ELLIPTICITY: f32 = 0.8;
+
+const CULL_DISTANCE: f32 = 1500.;
 
 #[derive(Debug, Default, Clone)]
 struct Planet {
@@ -34,7 +41,7 @@ impl Planet {
       self.color,
     );
 
-    let segments = Vec::from_iter(self.trail.iter().tuple_windows());
+    let segments = Vec::from_iter(self.trail.iter().step_by(3).tuple_windows());
     let len = segments.len();
     for (i, (a, b)) in segments.iter().enumerate() {
       let mut c = self.color;
@@ -44,7 +51,7 @@ impl Planet {
         pos_y(a.y, scale),
         pos_x(b.x, scale),
         pos_y(b.y, scale),
-        1.0,
+        3.0 * c.a,
         c,
       );
     }
@@ -116,7 +123,7 @@ impl Star {
   }
 }
 
-fn velocity_for_circular_orbit(sat: &Planet, center: &Planet) -> Vec2 {
+fn orbit_velocity(sat: &Planet, center: &Planet) -> Vec2 {
   let dist = sat.pos.distance(center.pos);
   let speed = (G * (center.mass + sat.mass) / dist).sqrt();
   let diff = sat.pos - center.pos;
@@ -125,6 +132,7 @@ fn velocity_for_circular_orbit(sat: &Planet, center: &Planet) -> Vec2 {
     y: diff.x,
   }
   .normalize();
+  let speed = speed.min(MAX_SPEED);
   tan * speed + center.velocity
 }
 
@@ -132,45 +140,18 @@ fn velocity_for_circular_orbit(sat: &Planet, center: &Planet) -> Vec2 {
 async fn main() {
   request_new_screen_size(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
-  let sun = Planet {
-    mass: 200000.,
-    color: Color::from_rgba(249, 182, 17, 255),
-    ..Default::default()
-  };
-
-  let earth = Planet {
-    pos: Vec2 { x: 500.0, y: 0.0 },
-    velocity: Vec2 { x: 0.1, y: 0.3 },
-    mass: 999.,
-    color: Color::from_rgba(129, 171, 84, 255),
-    ..Default::default()
-  };
-
-  let mut mun = Planet {
-    pos: Vec2 {
-      x: 450.0,
-      y: -450.0,
-    },
-    mass: 35.,
-    color: Color::from_rgba(75, 109, 119, 255),
-    ..Default::default()
-  };
-  mun.velocity = velocity_for_circular_orbit(&mun, &sun);
-
-  let mut mercury = Planet {
-    pos: Vec2 { x: 0.0, y: 300.0 },
-    mass: 200.,
-    color: Color::from_rgba(201, 55, 55, 255),
-    ..Default::default()
-  };
-  mercury.velocity = velocity_for_circular_orbit(&mercury, &sun);
-
-  let mut objects = vec![sun, earth, mun, mercury];
+  let mut objects = random_setup();
 
   let stars = (0..500).map(|_| Star::new()).collect::<Vec<Star>>();
 
   loop {
     clear_background(BLACK);
+
+    if is_key_pressed(KeyCode::R) {
+      objects = random_setup();
+    }
+
+    objects.retain_mut(|p| p.pos.length() <= CULL_DISTANCE);
 
     let copy = objects.clone();
     for (i, obj) in objects.iter_mut().enumerate() {
@@ -197,4 +178,37 @@ async fn main() {
 
     next_frame().await
   }
+}
+
+fn random_setup() -> Vec<Planet> {
+  let mut rng = rand::thread_rng();
+  let amount = rng.gen_range(4..=12);
+
+  let sun = Planet {
+    mass: 1500000.,
+    color: Color::from_rgba(249, 182, 17, 255),
+    ..Default::default()
+  };
+
+  let mut planets = Vec::from_iter((0..amount).map(|_| {
+    let mut planet = Planet {
+      pos: Vec2 {
+        x: rng.gen_range(-MAX_ORBIT_RADIUS..MAX_ORBIT_RADIUS),
+        y: rng.gen_range(-MAX_ORBIT_RADIUS..MAX_ORBIT_RADIUS),
+      },
+      mass: rng.gen_range(50.0..=5000.0),
+      color: Color::from_rgba(
+        rng.gen_range(20..=255),
+        rng.gen_range(20..=255),
+        rng.gen_range(20..=255),
+        255,
+      ),
+      ..Default::default()
+    };
+    planet.velocity = orbit_velocity(&planet, &sun);
+    planet.velocity.x += rng.gen_range(-ORBIT_ELLIPTICITY..=ORBIT_ELLIPTICITY);
+    planet
+  }));
+  planets.push(sun);
+  planets
 }
