@@ -1,0 +1,12 @@
+[package]
+name = "planets"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sergei Parshukov <codedby@bugman.me>"]
+license = "MIT"
+publish = false
+
+[dependencies]
+itertools = "0.10.5"
+macroquad = { version = "0.3.25", default-features = false }
+rand = "0.8.5"
