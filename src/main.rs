@@ -137,10 +137,17 @@ fn orbit_velocity(sat: &Planet, center: &Planet) -> Vec2 {
   tan * speed + center.velocity
 }
 
-#[macroquad::main("Planets")]
-async fn main() {
-  request_new_screen_size(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+fn window_conf() -> Conf {
+  Conf {
+    window_title: "Planets".to_owned(),
+    window_width: VIRTUAL_WIDTH as i32,
+    window_height: VIRTUAL_HEIGHT as i32,
+    ..Default::default()
+  }
+}
 
+#[macroquad::main(window_conf)]
+async fn main() {
   let mut objects = random_setup();
 
   let stars = (0..500).map(|_| Star::new()).collect::<Vec<Star>>();
