@@ -29,14 +29,14 @@ struct Planet {
 }
 
 impl Planet {
-  fn render(&self) {
+  fn render(&self, zero: &Vec2) {
     let scale = screen_width() / VIRTUAL_WIDTH;
 
     let radius = self.mass.ln() * scale;
 
     draw_circle(
-      pos_x(self.pos.x, scale),
-      pos_y(self.pos.y, scale),
+      pos_x(self.pos.x - zero.x, scale),
+      pos_y(self.pos.y - zero.y, scale),
       radius,
       self.color,
     );
@@ -47,10 +47,10 @@ impl Planet {
       let mut c = self.color;
       c.a = (len - i) as f32 / len as f32;
       draw_line(
-        pos_x(a.x, scale),
-        pos_y(a.y, scale),
-        pos_x(b.x, scale),
-        pos_y(b.y, scale),
+        pos_x(a.x - zero.x, scale),
+        pos_y(a.y - zero.y, scale),
+        pos_x(b.x - zero.x, scale),
+        pos_y(b.y - zero.y, scale),
         3.0 * c.a,
         c,
       );
@@ -159,6 +159,8 @@ async fn main() {
       }
     }
 
+    let sun_pos = objects.last().unwrap().pos;
+
     if !is_key_down(KeyCode::Space) {
       for obj in objects.iter_mut() {
         obj.apply_velocity();
@@ -166,7 +168,7 @@ async fn main() {
     }
 
     for obj in objects.iter() {
-      obj.render();
+      obj.render(&sun_pos);
     }
 
     for s in stars.iter() {
