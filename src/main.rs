@@ -94,15 +94,12 @@ struct Star {
 
 impl Star {
   fn new() -> Self {
-    let scale = screen_width() / VIRTUAL_WIDTH;
     let mut rng = rand::thread_rng();
 
-    let w = VIRTUAL_WIDTH / 2.0;
-    let h = screen_height() / 2.0 / scale;
     Star {
       pos: Vec2 {
-        x: rng.gen_range(-w..w),
-        y: rng.gen_range(-h..h),
+        x: rng.gen_range(-1.0..1.0),
+        y: rng.gen_range(-1.0..1.0),
       },
       magnitude: rng.gen_range(0.1..=1.1),
     }
@@ -114,8 +111,8 @@ impl Star {
 
     if rng.gen_range(0.0..1.0) >= 0.05 {
       draw_circle(
-        pos_x(self.pos.x, scale),
-        pos_y(self.pos.y, scale),
+        pos_x(self.pos.x * screen_width() / 2., 1.),
+        pos_y(self.pos.y * screen_height() / 2., 1.),
         self.magnitude * scale,
         WHITE,
       );
