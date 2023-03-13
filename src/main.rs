@@ -6,8 +6,6 @@ use std::collections::VecDeque;
 const VIRTUAL_WIDTH: f32 = 1920.;
 const VIRTUAL_HEIGHT: f32 = 1080.;
 
-const TRAIL_LENGTH: usize = 1000;
-
 const SCALE_FACTOR: f32 = 10e6;
 const G: f32 = 6.674e-11 * SCALE_FACTOR;
 
@@ -41,7 +39,7 @@ impl Planet {
       self.color,
     );
 
-    let segments = Vec::from_iter(self.trail.iter().step_by(3).tuple_windows());
+    let segments = Vec::from_iter(self.trail.iter().step_by(2).tuple_windows());
     let len = segments.len();
     for (i, (a, b)) in segments.iter().enumerate() {
       let mut c = self.color;
@@ -69,11 +67,17 @@ impl Planet {
     self.velocity += dir * a;
   }
 
-  fn apply_velocity(&mut self) {
+  fn apply_velocity(&mut self, sun_pos: &Vec2) {
     const SCALE_FACTOR: f32 = 1.0;
 
+    const MAX_TRAIL_LENGTH: f32 = 1200.0;
+    const MIN_DIST: f32 = 100.;
+    const MAX_DIST: f32 = 1000.;
+    let dist = sun_pos.distance(self.pos).clamp(MIN_DIST, MAX_DIST);
+    let adjusted_len = MAX_TRAIL_LENGTH * dist / MAX_DIST;
+
     self.trail.push_front(self.pos);
-    self.trail.truncate(TRAIL_LENGTH);
+    self.trail.truncate(adjusted_len as usize);
 
     self.pos += self.velocity * SCALE_FACTOR;
   }
@@ -163,7 +167,7 @@ async fn main() {
 
     if !is_key_down(KeyCode::Space) {
       for obj in objects.iter_mut() {
-        obj.apply_velocity();
+        obj.apply_velocity(&sun_pos);
       }
     }
 
